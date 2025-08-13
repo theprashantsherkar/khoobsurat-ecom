@@ -6,6 +6,7 @@ function App() {
       <h1 className="text-3xl font-bold underline">
         Hello world!
       </h1>
+      <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Consequatur error pariatur aspernatur iste temporibus asperiores illo ratione delectus. Eum, porro!</p>
     </div>
   )
 }
