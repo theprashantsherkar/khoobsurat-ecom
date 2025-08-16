@@ -1,110 +1,129 @@
-import { useState } from "react";
-import { useInventory, STATUS } from "../context/InventoryContext.jsx";
+// src/pages/Manufacturing.jsx
+import React, { useEffect, useState } from "react";
+import AddProductModal from "../components/AddProductModal";
+import ProductDetailModal from "../components/ProductDetailModal";
+import ProductCard from "../components/ProductCard";   // <-- import new component
+import sampleProducts from "../data/productsData";
+
+const STORAGE_KEY = "manufacturing_products";
 
 export default function Manufacturing() {
-  const { products, actions } = useInventory();
-  const [name, setName] = useState("");
-  const [qty, setQty] = useState("");
+  const [products, setProducts] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+      return sampleProducts || [];
+    } catch (e) {
+      return sampleProducts || [];
+    }
+  });
 
-  const manufactured = products.filter(p => p.status === STATUS.MANUFACTURED);
-  const ready = products.filter(p => p.status === STATUS.READY);
+  const [showAdd, setShowAdd] = useState(false);
+  const [viewProduct, setViewProduct] = useState(null);
+  const [editProduct, setEditProduct] = useState(null);
+  const [query, setQuery] = useState("");
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+  }, [products]);
+
+  const handleSaveProduct = (product) => {
+    const exists = products.some((p) => p.id === product.id);
+    if (exists) {
+      setProducts(products.map((p) => (p.id === product.id ? { ...product } : p)));
+    } else {
+      setProducts([...products, product]);
+    }
+    setShowAdd(false);
+    setEditProduct(null);
+  };
+
+  const handleOpenView = (product) => setViewProduct(product);
+  const handleCloseView = () => setViewProduct(null);
+
+  const handleUpdateProduct = (updated) => {
+    setProducts(products.map((p) => (p.id === updated.id ? { ...updated } : p)));
+    if (viewProduct && viewProduct.id === updated.id) setViewProduct(updated);
+  };
+
+  const handleDeleteProduct = (id) => {
+    if (window.confirm("Delete this product?")) {
+      setProducts(products.filter((p) => p.id !== id));
+      if (viewProduct && viewProduct.id === id) setViewProduct(null);
+    }
+  };
+
+  const handleEditProduct = (product) => {
+    setEditProduct(product);
+    setShowAdd(true);
+  };
+
+  const visible = products.filter((p) =>
+    p.name.toLowerCase().includes(query.trim().toLowerCase())
+  );
 
   return (
-    <div className="space-y-8">
-      <section className="p-4 md:p-6 border rounded-2xl">
-        <h2 className="text-lg font-semibold mb-4">Add Product (Manufacturing)</h2>
-        <form
-          onSubmit={e => {
-            e.preventDefault();
-            actions.addProduct({ name, qty, status: STATUS.MANUFACTURED });
-            setName("");
-            setQty("");
-          }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-3"
-        >
-          <input
-            className="border rounded-xl px-3 py-2"
-            placeholder="Product name"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            required
-          />
-          <input
-            className="border rounded-xl px-3 py-2"
-            placeholder="Quantity"
-            type="number"
-            min="0"
-            value={qty}
-            onChange={e => setQty(e.target.value)}
-            required
-          />
-          <button className="px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700">
-            Add as Manufactured
-          </button>
-        </form>
-      </section>
+    <div className="min-h-screen bg-purple-50 p-6">
+      <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
+        Manufacturing
+      </h1>
 
-      <section className="space-y-4">
-        <h3 className="text-base font-semibold">Manufactured (not yet ready)</h3>
-        <List
-          items={manufactured}
-          empty="No manufactured items."
-          actionsRenderer={item => (
+      <div className="max-w-6xl mx-auto mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 justify-between items-center mb-4">
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="border p-3 rounded-lg w-full sm:w-1/3 focus:outline-none focus:ring-2 focus:ring-purple-400"
+          />
+          <div className="flex gap-3">
             <button
-              onClick={() => actions.markReady(item.id)}
-              className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+              onClick={() => { setEditProduct(null); setShowAdd(true); }}
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg"
             >
-              Mark Ready
+              + Add Product
             </button>
-          )}
+          </div>
+        </div>
+
+        {visible.length === 0 ? (
+          <p className="text-center text-gray-500">
+            No products yet. Add your first product.
+          </p>
+        ) : (
+          <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            {visible.map((p) => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                onOpenView={handleOpenView}
+                onEdit={handleEditProduct}
+                onDelete={handleDeleteProduct}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      {showAdd && (
+        <AddProductModal
+          initialProduct={editProduct}
+          onClose={() => { setShowAdd(false); setEditProduct(null); }}
+          onSave={handleSaveProduct}
         />
-      </section>
+      )}
 
-      <section className="space-y-4">
-        <h3 className="text-base font-semibold">Ready for Sales</h3>
-        <List items={ready} empty="No ready items." />
-      </section>
+      {viewProduct && (
+        <ProductDetailModal
+          product={viewProduct}
+          onClose={handleCloseView}
+          onUpdateProduct={handleUpdateProduct}
+          onDeleteProduct={handleDeleteProduct}
+          onEditProduct={handleEditProduct}
+        />
+      )}
     </div>
   );
 }
-
-function List({ items, empty, actionsRenderer }) {
-  if (!items.length) {
-    return <p className="text-sm text-gray-500">{empty}</p>;
-  }
-  return (
-    <div className="overflow-x-auto border rounded-2xl">
-      <table className="min-w-full text-sm">
-        <thead className="bg-gray-50">
-          <tr>
-            <Th>Name</Th>
-            <Th>Qty</Th>
-            <Th>Status</Th>
-            <Th>Updated</Th>
-            <Th>Action</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map(item => (
-            <tr key={item.id} className="border-t">
-              <Td>{item.name}</Td>
-              <Td>{item.qty}</Td>
-              <Td>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100">
-                  {item.status}
-                </span>
-              </Td>
-              <Td>{new Date(item.updatedAt).toLocaleString()}</Td>
-              <Td>{actionsRenderer ? actionsRenderer(item) : "-"}</Td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-const Th = ({ children }) => (
-  <th className="text-left font-medium px-3 py-2">{children}</th>
-);
-const Td = ({ children }) => <td className="px-3 py-2">{children}</td>;
