@@ -14,6 +14,7 @@ export default function ProductDetailModal({
   const [localSizes, setLocalSizes] = useState([]); // [{size, qty}]
   const [dispatchMap, setDispatchMap] = useState({}); // { size: qtyToDispatch }
   const [error, setError] = useState("");
+  const [lastDeleted, setLastDeleted] = useState(null); // store deleted entry for undo
 
   useEffect(() => {
     if (!product) return;
@@ -32,8 +33,6 @@ export default function ProductDetailModal({
   }, [selectedColor, product]);
 
   if (!product) return null;
-
-  const totalPieces = localSizes.reduce((s, r) => s + Number(r.qty || 0), 0);
 
   const setDispatchQty = (size, value) => {
     const v = Number(value || 0);
@@ -88,14 +87,30 @@ export default function ProductDetailModal({
     setError("");
   };
 
-  const handleDelete = () => {
-    if (
-      window.confirm(
-        `Delete product "${product.name}"? This will remove history too.`
-      )
-    ) {
-      onDeleteProduct(product.id);
-    }
+  const handleDeleteHistoryEntry = (entryId) => {
+    if (!window.confirm("Are you sure you want to delete this history entry?"))
+      return;
+
+    const updatedHistory = product.history.filter((h) => h.id !== entryId);
+    const deletedEntry = product.history.find((h) => h.id === entryId);
+
+    const updatedProduct = {
+      ...product,
+      history: updatedHistory,
+    };
+
+    onUpdateProduct(updatedProduct);
+    setLastDeleted({ entry: deletedEntry, productId: product.id });
+  };
+
+  const handleUndoDelete = () => {
+    if (!lastDeleted) return;
+    const updatedProduct = {
+      ...product,
+      history: [...(product.history || []), lastDeleted.entry],
+    };
+    onUpdateProduct(updatedProduct);
+    setLastDeleted(null);
   };
 
   return (
@@ -211,7 +226,7 @@ export default function ProductDetailModal({
           {!product.history || product.history.length === 0 ? (
             <p className="text-gray-500">No history yet.</p>
           ) : (
-            <div className="overflow-auto max-h-48">
+            <div className="overflow-auto max-h-60">
               <table className="w-full table-auto">
                 <thead>
                   <tr className="text-left bg-gray-50">
@@ -221,6 +236,7 @@ export default function ProductDetailModal({
                     <th className="px-3 py-2">Size</th>
                     <th className="px-3 py-2">Qty</th>
                     <th className="px-3 py-2">Remaining</th>
+                    <th className="px-3 py-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -237,6 +253,14 @@ export default function ProductDetailModal({
                         <td className="px-3 py-2 text-sm">{h.size}</td>
                         <td className="px-3 py-2 text-sm">{h.qty}</td>
                         <td className="px-3 py-2 text-sm">{h.remaining}</td>
+                        <td className="px-3 py-2">
+                          <button
+                            onClick={() => handleDeleteHistoryEntry(h.id)}
+                            className="text-red-500 hover:text-red-700 text-sm"
+                          >
+                            Clear
+                          </button>
+                        </td>
                       </tr>
                     ))}
                 </tbody>
@@ -244,6 +268,27 @@ export default function ProductDetailModal({
             </div>
           )}
         </div>
+
+        {/* Undo Notification */}
+        {lastDeleted && (
+          <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded flex justify-between items-center">
+            <span className="text-sm">
+              History entry deleted.{" "}
+              <button
+                onClick={handleUndoDelete}
+                className="text-blue-600 font-semibold hover:underline"
+              >
+                Undo
+              </button>
+            </span>
+            <button
+              onClick={() => setLastDeleted(null)}
+              className="text-gray-500 hover:text-gray-700 text-sm"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

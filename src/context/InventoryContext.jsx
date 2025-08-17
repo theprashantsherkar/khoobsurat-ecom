@@ -1,52 +1,78 @@
-import { createContext, useContext, useMemo, useState } from "react";
+// src/context/InventoryContext.jsx
+import React, { createContext, useContext, useState, useEffect } from "react";
+import sampleProducts from "../data/productsData";
 
-const InventoryContext = createContext(null);
-export const useInventory = () => useContext(InventoryContext);
+const STORAGE_KEY = "manufacturing_products";
 
+// status constants
 export const STATUS = {
-  MANUFACTURED: "MANUFACTURED",
+  PENDING: "PENDING",
   READY: "READY",
   REQUESTED: "REQUESTED",
   DISPATCHED: "DISPATCHED",
 };
 
-const initialProducts = [
-  { id: "p-1", name: "Widget A", qty: 50, status: STATUS.READY, updatedAt: Date.now() },
-  { id: "p-2", name: "Widget B", qty: 20, status: STATUS.MANUFACTURED, updatedAt: Date.now() },
-  { id: "p-3", name: "Widget C", qty: 15, status: STATUS.REQUESTED, updatedAt: Date.now() },
-];
+const InventoryContext = createContext();
 
 export function InventoryProvider({ children }) {
-  const [products, setProducts] = useState(initialProducts);
+  const [products, setProducts] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+      return sampleProducts || [];
+    } catch {
+      return sampleProducts || [];
+    }
+  });
 
-  const addProduct = ({ name, qty, status = STATUS.MANUFACTURED }) => {
-    const id = `p-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    setProducts(prev => [
-      { id, name, qty: Number(qty) || 0, status, updatedAt: Date.now() },
-      ...prev,
-    ]);
+  // persist to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
+  }, [products]);
+
+  // actions
+  const addOrUpdateProduct = (product) => {
+    setProducts((prev) => {
+      const exists = prev.some((p) => p.id === product.id);
+      return exists
+        ? prev.map((p) => (p.id === product.id ? { ...product } : p))
+        : [...prev, product];
+    });
   };
 
-  const updateStatus = (id, status) => {
-    setProducts(prev =>
-      prev.map(p => (p.id === id ? { ...p, status, updatedAt: Date.now() } : p))
+  const deleteProduct = (id) =>
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+
+  const markReady = (id) =>
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: STATUS.READY } : p))
     );
-  };
 
-  const actions = useMemo(
-    () => ({
-      addProduct,
-      markReady: id => updateStatus(id, STATUS.READY),
-      requestItem: id => updateStatus(id, STATUS.REQUESTED),
-      markDispatched: id => updateStatus(id, STATUS.DISPATCHED),
-      setManufactured: id => updateStatus(id, STATUS.MANUFACTURED),
-    }),
-    []
-  );
+  const requestProduct = (id) =>
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: STATUS.REQUESTED } : p))
+    );
+
+  const dispatchProduct = (id) =>
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, status: STATUS.DISPATCHED } : p))
+    );
+
+  const actions = {
+    addOrUpdateProduct,
+    deleteProduct,
+    markReady,
+    requestProduct,
+    dispatchProduct,
+  };
 
   return (
-    <InventoryContext.Provider value={{ products, actions, STATUS }}>
+    <InventoryContext.Provider value={{ products, actions }}>
       {children}
     </InventoryContext.Provider>
   );
+}
+
+export function useInventory() {
+  return useContext(InventoryContext);
 }

@@ -6,8 +6,11 @@ export default function RoleSelection() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex flex-col items-center justify-center p-6">
       <h1 className="text-3xl font-bold text-gray-800 mb-8">
-        Select Your Section
+        Welcome to khoobsurat
       </h1>
+      <h2 className="text-2xl text-gray-800 mb-8">
+        Choose your department
+      </h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full max-w-4xl">
         {/* Manufacturing */}
