@@ -14,49 +14,62 @@ export const STATUS = {
 
 export function InventoryProvider({ children }) {
   const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
-  // Fetch all products from backend, mapping _id to id for frontend consistency
   const fetchProducts = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const res = await axios.get(API_URL);
       const mapped = res.data.map((p) => ({ ...p, id: p._id }));
       setProducts(mapped);
     } catch (err) {
       console.error("Failed to fetch products:", err);
+      setError("Failed to load products");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Add or update a product using MongoDB _id
+  // Other actions wrapped similarly for loading and error...
+
   const addOrUpdateProduct = async (product) => {
+    setLoading(true);
+    setError(null);
     try {
       if (product.id) {
-        // Update existing product
         await axios.put(`${API_URL}/${product.id}`, product);
       } else {
-        // Create new product
         await axios.post(API_URL, product);
       }
-      fetchProducts();
+      await fetchProducts();
     } catch (err) {
       console.error("Failed to save product:", err);
+      setError("Failed to save product");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Delete product by id (_id)
   const deleteProduct = async (id) => {
+    setLoading(true);
+    setError(null);
     try {
       await axios.delete(`${API_URL}/${id}`);
-      fetchProducts();
+      await fetchProducts();
     } catch (err) {
       console.error("Failed to delete product:", err);
+      setError("Failed to delete product");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Update product status helper
   const updateProductStatus = async (id, status) => {
     const product = products.find((p) => p.id === id);
     if (!product) return;
@@ -77,7 +90,7 @@ export function InventoryProvider({ children }) {
   };
 
   return (
-    <InventoryContext.Provider value={{ products, actions }}>
+    <InventoryContext.Provider value={{ products, loading, error, actions }}>
       {children}
     </InventoryContext.Provider>
   );

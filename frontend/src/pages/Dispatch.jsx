@@ -7,7 +7,7 @@ export default function Dispatch() {
   const dispatched = products.filter(p => p.status === STATUS.DISPATCHED);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-6 max-w-5xl mx-auto">
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Pending Dispatch</h2>
         <List
@@ -72,7 +72,11 @@ const Th = ({ children }) => (
 
 const Td = ({ children }) => <td className="px-3 py-2">{children}</td>;
 
-// Helper to sum quantities from sizes
+// Updated helper to sum quantities from colors & sizes
 function getTotalQty(product) {
-  return Object.values(product.sizes || {}).reduce((a, b) => a + b, 0);
+  return Object.values(product.colors || {}).reduce(
+    (total, sizeObj) =>
+      total + Object.values(sizeObj).reduce((sum, qty) => sum + Number(qty || 0), 0),
+    0
+  );
 }

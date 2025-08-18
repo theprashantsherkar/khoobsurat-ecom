@@ -1,70 +1,62 @@
-import { useInventory, STATUS } from "../context/InventoryContext.jsx";
+import React from "react";
+import { useInventory, STATUS } from "../context/InventoryContext";
 
 export default function Sales() {
-  const { products, actions } = useInventory();
-  const ready = products.filter(p => p.status === STATUS.READY);
-  const requested = products.filter(p => p.status === STATUS.REQUESTED);
+  const { products, loading, error, actions } = useInventory();
+
+  // Filter products marked READY for sale
+  const readyProducts = products.filter((p) => p.status === STATUS.READY);
+
+  // Calculate total quantity across all colors and sizes
+  const getTotalQty = (product) =>
+    Object.values(product.colors || {}).reduce(
+      (total, sizes) =>
+        total + Object.values(sizes).reduce((sum, qty) => sum + Number(qty || 0), 0),
+      0
+    );
+
+  const requestProduct = (id) => actions.requestProduct(id);
+
+  if (loading) return <p className="text-center p-6">Loading products...</p>;
+  if (error) return <p className="text-center p-6 text-red-600">{error}</p>;
 
   return (
-    <div className="space-y-8">
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Available (Ready)</h2>
-        <List
-          items={ready}
-          empty="Nothing is ready yet."
-          actionsRenderer={item => (
-            <button
-              onClick={() => actions.requestItem(item.id)}
-              className="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-            >
-              Request
-            </button>
-          )}
-        />
-      </section>
+    <div className="p-6 max-w-5xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6">Sales - Products Ready for Request</h1>
 
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Requested (Waiting for Dispatch)</h2>
-        <List items={requested} empty="No requests yet." />
-      </section>
-    </div>
-  );
-}
-
-function List({ items, empty, actionsRenderer }) {
-  if (!items.length) return <p className="text-sm text-gray-500">{empty}</p>;
-  return (
-    <div className="overflow-x-auto border rounded-2xl">
-      <table className="min-w-full text-sm">
-        <thead className="bg-gray-50">
-          <tr>
-            <Th>Name</Th>
-            <Th>Qty</Th>
-            <Th>Status</Th>
-            <Th>Updated</Th>
-            <Th>Action</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map(item => (
-            <tr key={item.id} className="border-t">
-              <Td>{item.name}</Td>
-              <Td>{item.qty}</Td>
-              <Td>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100">
-                  {item.status}
-                </span>
-              </Td>
-              <Td>{new Date(item.updatedAt).toLocaleString()}</Td>
-              <Td>{actionsRenderer ? actionsRenderer(item) : "-"}</Td>
+      {readyProducts.length === 0 ? (
+        <p>No products are currently ready for sale.</p>
+      ) : (
+        <table className="min-w-full border-collapse border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border border-gray-300 p-2 text-left">Product</th>
+              <th className="border border-gray-300 p-2 text-center">Quantity</th>
+              <th className="border border-gray-300 p-2">Last Updated</th>
+              <th className="border border-gray-300 p-2 text-center">Action</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {readyProducts.map((product) => (
+              <tr key={product.id} className="hover:bg-gray-50">
+                <td className="border border-gray-300 p-2">{product.name}</td>
+                <td className="border border-gray-300 p-2 text-center">{getTotalQty(product)}</td>
+                <td className="border border-gray-300 p-2">
+                  {new Date(product.updatedAt).toLocaleString()}
+                </td>
+                <td className="border border-gray-300 p-2 text-center">
+                  <button
+                    onClick={() => requestProduct(product.id)}
+                    className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700"
+                  >
+                    Request
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
-const Th = ({ children }) => (
-  <th className="text-left font-medium px-3 py-2">{children}</th>
-);
-const Td = ({ children }) => <td className="px-3 py-2">{children}</td>;

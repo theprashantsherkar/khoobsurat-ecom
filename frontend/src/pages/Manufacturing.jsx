@@ -5,7 +5,7 @@ import ProductDetailModal from "../components/ProductDetailModal";
 import ProductCard from "../components/ProductCard";
 
 export default function Manufacturing() {
-  const { products, actions } = useInventory();
+  const { products, loading, error, actions } = useInventory();
   const [showAdd, setShowAdd] = useState(false);
   const [viewProduct, setViewProduct] = useState(null);
   const [editProduct, setEditProduct] = useState(null);
@@ -27,6 +27,14 @@ export default function Manufacturing() {
       if (viewProduct && viewProduct.id === id) setViewProduct(null);
     }
   };
+
+  const handleUpdateProduct = async (updatedProduct) => {
+    await actions.addOrUpdateProduct(updatedProduct);
+    setViewProduct(updatedProduct); // Refresh modal data immediately
+  };
+
+  if (loading) return <p className="text-center p-6">Loading products...</p>;
+  if (error) return <p className="text-center p-6 text-red-600">{error}</p>;
 
   return (
     <div className="min-h-screen bg-purple-50 p-6">
@@ -93,7 +101,7 @@ export default function Manufacturing() {
         <ProductDetailModal
           product={viewProduct}
           onClose={() => setViewProduct(null)}
-          onUpdateProduct={actions.addOrUpdateProduct}
+          onUpdateProduct={handleUpdateProduct}
           onDeleteProduct={handleDeleteProduct}
           onEditProduct={(product) => {
             setEditProduct(product);

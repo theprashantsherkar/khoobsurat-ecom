@@ -135,16 +135,19 @@ export default function AddProductModal({ initialProduct, onClose, onSave }) {
             />
             <div className="mt-4 flex justify-center">
               <img
-                src={image || DEFAULT_AVATAR}
-                alt="preview"
-                className="w-40 h-40 object-cover rounded-md border-4 border-purple-200 mb-3"
-                onError={(e) => {
+              src={image ? image : DEFAULT_AVATAR}
+              alt="preview"
+              className="w-40 h-40 object-cover rounded-md border-4 border-purple-200 mb-3"
+              onError={e => {
+                if (e.target.src !== window.location.origin + DEFAULT_AVATAR) {
                   e.target.onerror = null;
                   e.target.src = DEFAULT_AVATAR;
-                }}
-              />
-            </div>
-          </div>
+                }
+                }
+                }
+                />
+                </div>
+                </div>
 
           {/* Right side */}
           <div>

@@ -6,8 +6,6 @@ export default function ProductDetailModal({
   product,
   onClose,
   onUpdateProduct,
-  onDeleteProduct,
-  onEditProduct,
 }) {
   const [selectedColor, setSelectedColor] = useState("");
   const [localSizes, setLocalSizes] = useState([]); // [{size, qty}]
